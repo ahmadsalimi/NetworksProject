@@ -5,8 +5,8 @@
 ![](./UML.svg)
 
 ## Members
-Ahmad Salimi
-Kimia Noorbakhsh
+Ahmad Salimi,
+Kimia Noorbakhsh,
 Alireza Ilami
 
 ## Discription
