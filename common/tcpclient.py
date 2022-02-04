@@ -51,8 +51,8 @@ class TCPClient(Generic[TRequest, TResponse]):
 
     def ask(self, request: TRequest) -> TResponse:
         packet = Packet(request)
-        packet.send_to(self.sock)
         promise = Promise()
         with self.lock:
             self.requests[packet.message_id] = promise
+        packet.send_to(self.sock)
         return promise.wait()
