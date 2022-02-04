@@ -26,7 +26,7 @@ with ThreadPoolExecutor(max_workers=8) as executor:
         while True:
             client, _ = sock.accept()
             print(f'accepted connection from {client.getpeername()}')
-            fd = client.makefile('rw', encoding='utf-8')
+            fd = client.makefile('r', encoding='utf-8')
             target_port = int(fd.readline())
             print(f'connecting to {target_port}')
             target_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
