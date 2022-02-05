@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -11,5 +11,5 @@ class Message:
     sender: 'User'
     receiver: 'User'
     text: str
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = field(default_factory=datetime.now)
     seen: bool = False

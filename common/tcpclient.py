@@ -46,6 +46,8 @@ class TCPClient(Generic[TRequest, TResponse]):
                 if packet.message_id in self.requests:
                     self.requests[packet.message_id].notify(packet)
                     del self.requests[packet.message_id]
+                    if packet.is_exit:
+                        break
                 else:
                     warnings.warn(f'unexpected packet {packet.message_id}')
 
@@ -56,3 +58,13 @@ class TCPClient(Generic[TRequest, TResponse]):
             self.requests[packet.message_id] = promise
         packet.send_to(self.sock)
         return promise.wait()
+
+    def exit(self) -> None:
+        packet = Packet(None, is_exit=True)
+        promise = Promise()
+        with self.lock:
+            self.requests[packet.message_id] = promise
+        packet.send_to(self.sock)
+        promise.wait()
+        self.read_thread.join()
+        self.sock.close()

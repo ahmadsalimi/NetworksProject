@@ -1,5 +1,6 @@
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
@@ -20,6 +21,10 @@ class Chat:
             if message.receiver == user:
                 message.seen = True
         return messages
+
+    @property
+    def last_modified(self) -> datetime:
+        return self.messages[-1].timestamp
 
     def unread_count(self, user: 'User') -> bool:
         return len([

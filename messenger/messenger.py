@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import datetime
+from datetime import datetime
 from typing import Callable, Dict, List, Tuple, Any
 from uuid import UUID
 from enum import Enum
@@ -13,7 +13,15 @@ from .user import User
 @dataclass
 class InboxItem:
     user: str
+    last_modified: datetime = datetime.min
     unread_count: int = 0
+
+    @property
+    def is_unread(self) -> bool:
+        return self.unread_count > 0
+
+    def __lt__(self, other: 'InboxItem') -> bool:
+        return self.is_unread < other.is_unread or self.last_modified < other.last_modified
 
 
 @dataclass
@@ -39,6 +47,8 @@ class RequestType(Enum):
     GetInbox = 2
     SendMessage = 3
     ReadMessages = 4
+    CheckUsername = 5
+    Logout = 6
 
 
 @dataclass
@@ -89,7 +99,14 @@ class Messenger(TCPServer[MessengerRequest, Any]):
             return self.send_message(client_id, *request.args)
         if request.type == RequestType.ReadMessages:
             return self.read_messages(client_id, *request.args)
+        if request.type == RequestType.CheckUsername:
+            return self.checkusername(*request.args)
+        if request.type == RequestType.Logout:
+            return self.logout(client_id)
         raise MessengerError(f'Unknown request type {request.type}')
+
+    def checkusername(self, username: str) -> bool:
+        return username not in self.users
 
     def signup(self, username: str, password: str) -> None:
         if username in self.users:
@@ -104,15 +121,17 @@ class Messenger(TCPServer[MessengerRequest, Any]):
             raise MessengerError(f'Invalid password')
         self.onlines[client_id] = user
 
+    def logout(self, client_id: UUID) -> None:
+        del self.onlines[client_id]
+
     @inject_user
     def get_inbox(self, user: User) -> List[InboxItem]:
-        inbox = sorted([InboxItem(username, chat.unread_count(self.users[username]))
-                        for username, chat in user.chats.items()],
-                       key=lambda x: x.unread_count == 0)
+        inbox = [InboxItem(username, chat.last_modified, chat.unread_count(user))
+                        for username, chat in user.chats.items()]
         inbox += [InboxItem(username) for username in self.users
                   if username not in user.chats
                   and username != user.username]
-        return inbox
+        return sorted(inbox, reverse=True)
 
     @inject_user
     @inject_contact

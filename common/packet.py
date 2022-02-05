@@ -10,6 +10,7 @@ class Packet:
     data: Any
     message_id: UUID = uuid1()
     is_error: bool = False
+    is_exit: bool = False
 
     @staticmethod
     def read_from(sock: socket.socket) -> 'Packet':

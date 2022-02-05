@@ -25,3 +25,9 @@ class MessengerClient:
 
     def read_messages(self, contact: str, count: int) -> List[MessageItem]:
         return self.__ask(RequestType.ReadMessages, contact, count)
+
+    def checkusername(self, username: str) -> bool:
+        return self.__ask(RequestType.CheckUsername, username)
+
+    def logout(self) -> None:
+        self.__ask(RequestType.Logout)
