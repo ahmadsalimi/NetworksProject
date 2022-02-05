@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 import socket
 import threading
 import time
-from typing import Dict, Generic, TypeVar
+import traceback
+from typing import Generic, TypeVar
 from uuid import UUID, uuid1
 
 from .packet import Packet
@@ -24,7 +25,8 @@ class TCPServer(Generic[TRequest, TResponse], ABC):
             while True:
                 client, _ = self.sock.accept()
                 print(f'accepted connection from {client.getpeername()}')
-                threading.Thread(target=self.__handle_client, args=(client,)).start()
+                threading.Thread(target=self.__handle_client,
+                                 args=(client,)).start()
         finally:
             time.sleep(10)
             self.sock.close()
@@ -41,6 +43,7 @@ class TCPServer(Generic[TRequest, TResponse], ABC):
                 packet = Packet(response, packet.message_id)
             except Exception as e:
                 packet = Packet(e, packet.message_id, is_error=True)
+                print(traceback.format_exc())
             packet.send_to(client)
         print(f'closing connection from {client.getpeername()}')
         time.sleep(1)

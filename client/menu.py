@@ -5,13 +5,14 @@ from typing import Dict, Tuple, Type
 import re
 
 import bcrypt
-from client.firewall import Firewall, PacketDropException
-from client.messenger import MessengerClient
-from client.ui import LockedCurses, WinWrapper
 
 from common.tcpclient import TCPClient
 from messenger.messenger import MessageItem, MessengerError
-
+from .media_ui import MediaUI
+from .mediastream import MediaStreamClient
+from .firewall import Firewall, PacketDropException
+from .messenger import MessengerClient
+from .chat_ui import LockedCurses, WinWrapper
 
 
 class Menu(ABC):
@@ -33,6 +34,51 @@ class Menu(ABC):
                     return
             except PacketDropException:
                 print('packet dropped due to firewall rules')
+
+
+class MainMenu(Menu):
+    def __init__(self, messenger_port: int, stream_port: int) -> None:
+        self.__admin_pass_hash: bytes = None
+        self.servers: Dict[str, Tuple[Type[Menu], int]] = {
+            'shalgham': (MessengerMainMenu, messenger_port),
+            'choghondar': (MediaStreamMenu, stream_port),
+        }
+
+    def display(self) -> None:
+        if self.__admin_pass_hash is None:
+            password = input('Enter admin password: ')
+            self.__admin_pass_hash = bcrypt.hashpw(
+                password.encode(), bcrypt.gensalt())
+        print('1. Connect to external servers')
+        print('2. Login as admin')
+        print('3. Exit')
+
+    def action(self, cmd: str) -> bool:
+        if cmd == '1':
+            server = input('Enter the server: ').strip().split(' via ')
+            if server[0] not in self.servers:
+                print(f'Unknown server {server[0]}')
+                return False
+            servermenu, port = self.servers[server[0]]
+            if len(server) == 2:
+                from common.proxyclient import ProxyClient
+                proxy_port = int(server[1])
+                tcpclient = ProxyClient('localhost', proxy_port, port)
+            else:
+                from common.tcpclient import TCPClient
+                tcpclient = TCPClient('localhost', port)
+            servermenu(tcpclient).run()
+        elif cmd == '2':
+            password = input('Enter admin password: ')
+            if bcrypt.checkpw(password.encode(), self.__admin_pass_hash):
+                AdminMenu().run()
+            else:
+                print('Incorrect password')
+        elif cmd == '3':
+            return True
+        else:
+            print('Invalid input')
+        return False
 
 
 class MessengerMainMenu(Menu):
@@ -61,7 +107,8 @@ class MessengerMainMenu(Menu):
                     username = input('Please enter your username: ')
                     if self.client.checkusername(username):
                         break
-                    print('This username is already existed or invalid. Please enter another one.')
+                    print('This username is already existed or '
+                          'invalid. Please enter another one.')
                 password = input('Please enter your password: ')
                 self.client.signup(username, password)
             elif cmd == '2':
@@ -104,7 +151,9 @@ class InboxMenu(Menu):
             self.chat_finished = False
             y, x = curses.getmaxyx()
             messages_win = curses.newwin(y, x, 0, 0)
-            t = threading.Thread(target=self.__show_messages, args=(messages_win, contact, x, y - 1))
+            t = threading.Thread(
+                target=self.__show_messages, 
+                args=(messages_win, contact, x, y - 1))
             t.start()
 
             input_win = curses.newwin(1, x, y - 1, 0)
@@ -120,7 +169,7 @@ class InboxMenu(Menu):
                     self.n_messages = min(int(mo.group(1)), y - 1)
                 else:
                     self.client.send_message(contact, message)
-            
+
             self.chat_finished = True
             t.join()
         finally:
@@ -151,82 +200,35 @@ class InboxMenu(Menu):
 class MediaStreamMenu(Menu):
 
     def __init__(self, tcpclient: TCPClient) -> None:
-        # TODO
-        pass
+        self.client = MediaStreamClient(tcpclient)
+        self.files = None
 
     def display(self) -> None:
-        print('Welcome to MediaStream!\nPlease choose a media to display:\n')
-        print('1. Breaking Bad S1E1')
-        print('2. The Godfather')
-        print('3. Hangover 1')
-        print('4. Exit')
+        print('Welcome to CHOGHONDAR!\nPlease choose a media to display:\n')
+        try:
+            self.files = self.client.get_list()
+        except PacketDropException:
+            print('packet dropped due to firewall rules')
+            self.files = []
+        for i, file in enumerate(self.files):
+            print(f'{i + 1}. {file}')
+        print(f'{len(self.files) + 1}. Exit')
 
     def action(self, cmd: str) -> bool:
-        if cmd == '1':
-            # play media 1
-            # TODO
-            pass
-        elif cmd == '2':
-            # play media 2
-            # TODO
-            pass
-        elif cmd == '3':
-            # play media 3
-            # TODO
-            pass
-        elif cmd == '4':
+        if 0 < (idx := int(cmd)) < len(self.files) + 1:
+            file = self.files[idx - 1]
+            print('start playing...')
+            ui = MediaUI(self.client, file)
+            ui.show()
+        elif idx == len(self.files) + 1:
             return True
         else:
-            print('Invalid input')
-        return False
-
-
-class MainMenu(Menu):
-    def __init__(self, messenger_port: int, stream_port: int) -> None:
-        self.__admin_pass_hash: bytes = None
-        self.servers: Dict[str, Tuple[Type[Menu], int]] = {
-            'shalgham': (MessengerMainMenu, messenger_port),
-            'choghondar': (MediaStreamMenu, stream_port),
-        }
-
-    def display(self) -> None:
-        if self.__admin_pass_hash is None:
-            password = input('Enter admin password: ')
-            self.__admin_pass_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        print('1. Connect to external servers')
-        print('2. Login as admin')
-        print('3. Exit')
-
-    def action(self, cmd: str) -> bool:
-        if cmd == '1':
-            server = input('Enter the server: ').strip().split(' via ')
-            if server[0] not in self.servers:
-                print(f'Unknown server {server[0]}')
-                return False
-            servermenu, port = self.servers[server[0]]
-            if len(server) == 2:
-                from common.proxyclient import ProxyClient
-                proxy_port = int(server[1])
-                tcpclient = ProxyClient('localhost', proxy_port, port)
-            else:
-                from common.tcpclient import TCPClient
-                tcpclient = TCPClient('localhost', port)
-            servermenu(tcpclient).run()
-        elif cmd == '2':
-            password = input('Enter admin password: ')
-            if bcrypt.checkpw(password.encode(), self.__admin_pass_hash):
-                AdminMenu().run()
-            else:
-                print('Incorrect password')
-        elif cmd == '3':
-            return True
-        else:
-            print('Invalid input')
+            print('Invalid input :/')
         return False
 
 
 class AdminMenu(Menu):
-    
+
     def display(self) -> None:
         print('Enter the command:')
         print('activate whitelist/blacklist firewall')

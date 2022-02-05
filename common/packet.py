@@ -16,10 +16,12 @@ class Packet:
     def read_from(sock: socket.socket) -> 'Packet':
         length = int(sock.recv(10).decode('utf-8'))
         pickled = sock.recv(length)
+        while len(pickled) < length:
+            pickled += sock.recv(length - len(pickled))
         return pickle.loads(pickled)
 
     def send_to(self, sock: socket.socket) -> None:
         pickled = pickle.dumps(self)
         length = len(pickled)
-        sock.send(f'{length:<10}'.encode('utf-8'))
-        sock.send(pickled)
+        sock.sendall(f'{length:<10}'.encode('utf-8'))
+        sock.sendall(pickled)

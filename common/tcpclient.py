@@ -1,6 +1,5 @@
 
 
-from multiprocessing import Lock
 import socket
 import threading
 from typing import Dict, Generic
@@ -36,7 +35,7 @@ class TCPClient(Generic[TRequest, TResponse]):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))
         self.requests: Dict[UUID, Promise] = {}
-        self.lock = Lock()
+        self.lock = threading.Lock()
         self.read_thread = threading.Thread(target=self.__read)
         self.read_thread.start()
         print(self.sock.getpeername())

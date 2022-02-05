@@ -2,13 +2,16 @@
 # -*- coding: iso-8859-1 -*-
 
 import collections
-import curses, curses.ascii, curses.panel
+import curses
+import curses.ascii
+import curses.panel
 import sys
 import select
 import threading
 from typing import Tuple
 
 #gui = None
+
 
 class LockedCurses(threading.Thread):
     """
@@ -26,6 +29,7 @@ class LockedCurses(threading.Thread):
     keyboard interrupts and redirect them to make us shut down
     cleanly.  (This could be improved...)
     """
+
     def __init__(self):
         super(LockedCurses, self).__init__()
         self._lock = threading.Lock()
@@ -149,6 +153,7 @@ class LockedWrapper(object):
     Wraps windows and panels and such.  locker is the LockedCurses
     that we need to use to pass calls through.
     """
+
     def __init__(self, locker, interior_object):
         self._locker = locker
         self._interior = interior_object

@@ -28,6 +28,6 @@ class Chat:
 
     def unread_count(self, user: 'User') -> bool:
         return len([
-            message for message in self.messages 
+            message for message in self.messages
             if not message.seen and message.receiver == user
         ])

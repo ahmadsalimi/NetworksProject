@@ -1,1 +1,3 @@
+numpy
 bcrypt
+opencv-python

@@ -15,7 +15,8 @@ def send(src: socket.socket, dst: socket.socket, close_other: bool = False):
 
 
 parser = argparse.ArgumentParser(description='Proxy server')
-parser.add_argument('-p', '--port', type=int, default=8080, help='Port to listen on')
+parser.add_argument('-p', '--port', type=int,
+                    default=8080, help='Port to listen on')
 args = parser.parse_args()
 
 with ThreadPoolExecutor(max_workers=8) as executor:
@@ -29,7 +30,8 @@ with ThreadPoolExecutor(max_workers=8) as executor:
             fd = client.makefile('r', encoding='utf-8')
             target_port = int(fd.readline())
             print(f'connecting to {target_port}')
-            target_connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            target_connection = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM)
             target_connection.connect(('localhost', target_port))
             executor.submit(send, client, target_connection, close_other=True)
             executor.submit(send, target_connection, client)

@@ -25,7 +25,12 @@ class MediaStreamRequest:
     args: Tuple[Any, ...]
 
 
-VIDEO_EXTENSIONS = set(['mp4', 'avi', 'mkv', 'mov', 'flv', 'wmv', 'mpg', 'mpeg', 'm4v', '3gp', '3g2'])
+VIDEO_EXTENSIONS = set(['mp4', 'avi',
+                        'mkv', 'mov',
+                        'flv', 'wmv',
+                        'mpg', 'mpeg',
+                        'm4v', '3gp',
+                        '3g2'])
 
 
 class StreamingError(Exception):
@@ -37,12 +42,13 @@ class VideoReader:
     def __init__(self, path: str, on_close: Callable[[UUID], None]) -> None:
         self.__video = cv2.VideoCapture(path)
         self.__frame_queue = queue.Queue(maxsize=16)
-        self.__reading_thread = threading.Thread(target=self.__read_frames)
         self.__finished = False
         self.__closed = False
         self.__on_close = on_close
         self.fps: float = self.__video.get(cv2.CAP_PROP_FPS)
         self.uid = uuid1()
+        self.__reading_thread = threading.Thread(target=self.__read_frames)
+        self.__reading_thread.start()
 
     def __read_frames(self) -> None:
         while True:
@@ -53,7 +59,9 @@ class VideoReader:
                 with self.__frame_queue.mutex:
                     self.__finished = True
                 return
-            self.__frame_queue.put(cv2.imencode(".jpg", frame).tobytes())
+            ret, frame = cv2.imencode('.jpg', frame)
+            if ret:
+                self.__frame_queue.put(frame.tobytes())
 
     @property
     def finished(self) -> bool:
@@ -85,8 +93,9 @@ class MediaStreamServer(TCPServer[MediaStreamRequest, Any]):
 
     def __init__(self, port: int, root_directory: str) -> None:
         super().__init__(port)
-        self.files = [os.path.basename(file) for file in glob(os.path.join(root_directory, '*'))
-                 if file.split('.')[-1] in VIDEO_EXTENSIONS]
+        self.files = [os.path.basename(file)
+                      for file in glob(os.path.join(root_directory, '*'))
+                      if file.split('.')[-1] in VIDEO_EXTENSIONS]
         self.root_directory = root_directory
         self.streams: Dict[UUID, VideoReader] = {}
 
@@ -101,7 +110,7 @@ class MediaStreamServer(TCPServer[MediaStreamRequest, Any]):
             return self.close_stream(*request.args)
 
     def get_list(self) -> List[str]:
-        return list(self.files.keys())
+        return self.files
 
     def __on_close(self, uid: UUID) -> None:
         del self.streams[uid]
