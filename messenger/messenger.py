@@ -106,7 +106,8 @@ class Messenger(TCPServer[MessengerRequest, Any]):
 
     @inject_user
     def get_inbox(self, user: User) -> List[InboxItem]:
-        inbox = sorted([InboxItem(username, chat.unread_count) for username, chat in user.chats.items()],
+        inbox = sorted([InboxItem(username, chat.unread_count(self.users[username]))
+                        for username, chat in user.chats.items()],
                        key=lambda x: x.unread_count == 0)
         inbox += [InboxItem(username) for username in self.users
                   if username not in user.chats

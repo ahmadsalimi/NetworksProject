@@ -1,8 +1,10 @@
+import argparse
 import threading
 import time
 
 from client.messenger import MessengerClient
 from client.ui import LockedCurses
+from common.proxyclient import ProxyClient
 from common.tcpclient import TCPClient
 
 
@@ -25,8 +27,18 @@ def show_messages(win, contact: str, w: int, h: int):
 
 
 if __name__ == '__main__':
-    port = int(input('Port: '))
-    client = MessengerClient(TCPClient('localhost', port))
+    parser = argparse.ArgumentParser(description='Messenger client')
+    parser.add_argument('-p', '--port', type=int, default=8080, help='port')
+    parser.add_argument('--proxy', type=int, default=None, help='proxy port (optional)')
+
+    args = parser.parse_args()
+
+    if args.proxy is None:
+        client = TCPClient('localhost', args.port)
+    else:
+        client = ProxyClient('localhost', args.proxy, args.port)
+
+    client = MessengerClient(client)
     while True:
         cmd = input('> ')
         if cmd == 'signup':

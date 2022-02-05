@@ -21,6 +21,8 @@ class Chat:
                 message.seen = True
         return messages
 
-    @property
-    def unread_count(self) -> bool:
-        return len([message for message in self.messages if not message.seen])
+    def unread_count(self, user: 'User') -> bool:
+        return len([
+            message for message in self.messages 
+            if not message.seen and message.receiver == user
+        ])
