@@ -5,6 +5,7 @@ from typing import Dict, Tuple, Type
 import re
 
 import bcrypt
+from client.firewall import Firewall, PacketDropException
 from client.messenger import MessengerClient
 from client.ui import LockedCurses, WinWrapper
 
@@ -25,10 +26,13 @@ class Menu(ABC):
 
     def run(self) -> None:
         while True:
-            self.display()
-            cmd = input('> ')
-            if self.action(cmd.strip()):
-                return
+            try:
+                self.display()
+                cmd = input('> ')
+                if self.action(cmd.strip()):
+                    return
+            except PacketDropException:
+                print('packet dropped due to firewall rules')
 
 
 class MessengerMainMenu(Menu):
@@ -45,7 +49,10 @@ class MessengerMainMenu(Menu):
         try:
             super().run()
         finally:
-            self.client.client.exit()
+            try:
+                self.client.client.exit()
+            except PacketDropException:
+                print('packet dropped due to firewall rules')
 
     def action(self, cmd: str) -> bool:
         try:
@@ -206,7 +213,7 @@ class MainMenu(Menu):
                 tcpclient = TCPClient('localhost', port)
             servermenu(tcpclient).run()
         elif cmd == '2':
-            password = cmd('Enter admin password: ')
+            password = input('Enter admin password: ')
             if bcrypt.checkpw(password.encode(), self.__admin_pass_hash):
                 AdminMenu().run()
             else:
@@ -219,7 +226,27 @@ class MainMenu(Menu):
 
 
 class AdminMenu(Menu):
-    pass
+    
+    def display(self) -> None:
+        print('Enter the command:')
+        print('activate whitelist/blacklist firewall')
+        print('open/close <port>')
+        print('exit')
+
+    def action(self, cmd: str) -> bool:
+        if cmd == 'activate whitelist firewall':
+            Firewall.whitelist()
+        elif cmd == 'activate blacklist firewall':
+            Firewall.blacklist()
+        elif mo := re.match(r'open (\d+)', cmd):
+            Firewall.instance().open(int(mo.group(1)))
+        elif mo := re.match(r'close (\d+)', cmd):
+            Firewall.instance().close(int(mo.group(1)))
+        elif cmd == 'exit':
+            return True
+        else:
+            print('Invalid input')
+        return False
 
 
 class MessengerSignupMenu(Menu):

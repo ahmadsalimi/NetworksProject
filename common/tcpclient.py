@@ -7,6 +7,7 @@ from typing import Dict, Generic
 from uuid import UUID
 import warnings
 
+from client.firewall import Firewall
 from .packet import Packet
 from .tcpserver import TRequest, TResponse
 
@@ -38,6 +39,7 @@ class TCPClient(Generic[TRequest, TResponse]):
         self.lock = Lock()
         self.read_thread = threading.Thread(target=self.__read)
         self.read_thread.start()
+        print(self.sock.getpeername())
 
     def __read(self) -> None:
         while True:
@@ -51,6 +53,7 @@ class TCPClient(Generic[TRequest, TResponse]):
                 else:
                     warnings.warn(f'unexpected packet {packet.message_id}')
 
+    @Firewall.filter_packet
     def ask(self, request: TRequest) -> TResponse:
         packet = Packet(request)
         promise = Promise()
@@ -59,6 +62,7 @@ class TCPClient(Generic[TRequest, TResponse]):
         packet.send_to(self.sock)
         return promise.wait()
 
+    @Firewall.filter_packet
     def exit(self) -> None:
         packet = Packet(None, is_exit=True)
         promise = Promise()
