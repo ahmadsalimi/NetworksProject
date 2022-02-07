@@ -1,14 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pickle
 import socket
 from typing import Any
-from uuid import UUID, uuid1
+from uuid import UUID, uuid4
 
 
 @dataclass
 class Packet:
     data: Any
-    message_id: UUID = uuid1()
+    message_id: UUID = field(default_factory=uuid4)
     is_error: bool = False
     is_exit: bool = False
 

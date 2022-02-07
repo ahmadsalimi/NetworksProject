@@ -83,7 +83,7 @@ class LockedCurses(threading.Thread):
         assert(self._screen is not None)
         curses.savetty()
         curses.noecho()
-        curses.cbreak()
+        # curses.cbreak()
         self._running = True
         self._starting = False
         with self._lock:

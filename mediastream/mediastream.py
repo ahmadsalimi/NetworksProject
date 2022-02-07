@@ -5,7 +5,7 @@ import os
 import queue
 import threading
 from typing import Any, Callable, Dict, List, Tuple
-from uuid import UUID, uuid1
+from uuid import UUID, uuid4
 
 import cv2
 
@@ -46,7 +46,7 @@ class VideoReader:
         self.__closed = False
         self.__on_close = on_close
         self.fps: float = self.__video.get(cv2.CAP_PROP_FPS)
-        self.uid = uuid1()
+        self.uid = uuid4()
         self.__reading_thread = threading.Thread(target=self.__read_frames)
         self.__reading_thread.start()
 
