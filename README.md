@@ -5,8 +5,8 @@ Ahmad Salimi,
 Kimia Noorbakhsh,
 Alireza Ilami
 
-## Discription
-This repository is for Computer Networks course project at Sharif University of Technology
+## Description
+This repository is for the Computer Networks course (CE443) project at Sharif University of Technology
 
 
 ## Usage
